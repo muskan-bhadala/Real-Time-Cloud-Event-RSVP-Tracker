@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Real-Time Event RSVP Tracker</title>
+<style>
+:root{
+  --bg:#f4f6fb;--card:#ffffff;--tx:#1f2937;--mut:#667085;--pri:#6366f1;
+  --pri2:#eef2ff;--ok:#16a34a;--ok2:#ecfdf3;--warn:#d97706;--warn2:#fff7ed;
+  --bad:#dc2626;--bad2:#fef2f2;--bd:#dfe4ee;--input:#fbfcff;--shadow:0 8px 24px rgba(31,41,55,.06)
+}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:linear-gradient(135deg,#f7f8fc 0%,#eef2ff 100%);color:var(--tx);min-height:100vh}
+main{max-width:920px;margin:0 auto;padding:28px 18px 40px}
+h1{font-size:25px;margin:0 0 18px;letter-spacing:-.3px}
+.card{background:rgba(255,255,255,.94);border:1px solid var(--bd);border-radius:16px;padding:18px;margin:14px 0;box-shadow:var(--shadow)}
+.section-title{font-size:15px;font-weight:700;margin-bottom:12px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.field{flex:1;min-width:170px}
+.field.small{min-width:130px}
+.field label{display:block;font-size:12px;font-weight:700;color:#596579;margin:0 0 6px 2px}
+input,select,textarea,button{font:inherit;border-radius:10px}
+input,select,textarea{width:100%;padding:10px 12px;border:1px solid #d8deea;background:var(--input);color:var(--tx);outline:none;transition:border-color .15s,box-shadow .15s,background .15s}
+input:focus,select:focus,textarea:focus{border-color:#9aa2ff;box-shadow:0 0 0 3px rgba(99,102,241,.10);background:#fff}
+textarea{min-height:88px;resize:vertical}
+button{padding:10px 14px;cursor:pointer;background:var(--pri);color:#fff;border:0;font-weight:600;transition:transform .12s,filter .12s}
+button:hover{filter:brightness(.98);transform:translateY(-1px)}
+button.g{background:var(--ok)}button.w{background:var(--warn)}button.r{background:var(--bad)}button.o{background:#fff;color:var(--pri);border:1px solid #aeb5ff}
+.auth-actions{margin-top:12px;align-items:center}
+.auth-actions .role-field{flex:1;min-width:180px}
+.event-form{display:grid;gap:12px}
+.event-card{padding:18px}
+.event-top{align-items:center}
+.event-top b{font-size:17px}
+.cnt{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:13px 0}
+.cnt div{text-align:center;background:#f7f8fc;border:1px solid #e8ebf2;border-radius:11px;padding:9px}
+.cnt b{font-size:24px;display:block;color:#293245}
+.badge{padding:3px 9px;border-radius:99px;font-size:12px;background:var(--pri2);color:#4f46e5;font-weight:700}
+.mut{color:var(--mut);font-size:13px}
+.bar{height:9px;background:#e8ebf2;border-radius:99px;overflow:hidden;margin-top:12px}.bar i{display:block;height:100%;background:linear-gradient(90deg,#818cf8,#6366f1);transition:width .4s}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1f2937;color:#fff;padding:10px 16px;border-radius:10px;display:none;box-shadow:0 8px 24px rgba(0,0,0,.15)}
+.hide{display:none}
+.n{border-bottom:1px solid #edf0f5;padding:8px 0;font-size:13px}.n:last-child{border-bottom:0}.n.u{font-weight:600}
+.help{font-size:12px;color:var(--mut);margin-top:2px}
+.form-actions{margin-top:2px}
+@media(max-width:700px){main{padding:20px 12px}.cnt{grid-template-columns:repeat(2,1fr)}.field{min-width:100%}.field.small{min-width:100%}}
+</style></head><body><main>
+<h1>Real-Time Event RSVP Tracker</h1>
+
+<div id="auth" class="card">
+  <div class="section-title">Account</div>
+  <div class="row">
+    <div class="field"><label for="name">Full name</label><input id="name" placeholder="e.g. Olivia Organizer"></div>
+    <div class="field"><label for="email">Email address</label><input id="email" placeholder="you@example.com"></div>
+    <div class="field"><label for="pw">Password</label><input id="pw" type="password" placeholder="Minimum 6 characters"></div>
+  </div>
+  <div class="row auth-actions">
+    <div class="field role-field"><label for="role">Account role</label><select id="role"><option value="attendee">Attendee</option><option value="organizer">Organizer</option></select></div>
+    <button onclick="register()">Register</button><button class="o" onclick="login()">Login</button>
+  </div>
+</div>
+
+<div id="app" class="hide">
+  <div class="card row"><span id="who" style="flex:1"></span><button class="o" onclick="logout()">Logout</button></div>
+  <div id="create" class="card hide">
+    <div class="section-title">Create event</div>
+    <div class="event-form">
+      <div class="row">
+        <div class="field"><label for="ename">Event name</label><input id="ename" placeholder="e.g. Cloud Computing Workshop"></div>
+        <div class="field small"><label for="cap">Maximum capacity</label><input id="cap" type="number" min="1" placeholder="e.g. 100" value="100"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label for="edate">Event date</label><input id="edate" type="date"></div>
+        <div class="field small"><label for="st">Start time</label><input id="st" type="time" value="10:00"></div>
+        <div class="field small"><label for="et">End time</label><input id="et" type="time" value="12:00"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label for="venue">Venue / location</label><input id="venue" placeholder="e.g. Computer Lab 3 or Online"></div>
+        <div class="field"><label for="deadline">Registration deadline <span class="mut">(optional)</span></label><input id="deadline" type="date"></div>
+      </div>
+      <div class="field"><label for="desc">Event description</label><textarea id="desc" placeholder="Briefly describe the event, agenda, or instructions..."></textarea></div>
+      <div class="form-actions"><button id="publishBtn" type="button">Publish event</button></div>
+    </div>
+  </div>
+  <div class="card"><div class="section-title" style="margin-bottom:4px">Notifications <span id="nc" class="badge">0</span></div><div id="notifs"></div></div>
+  <div id="events"></div>
+</div>
+<div id="toast"></div>
+</main>
+<script>
+const $=s=>document.querySelector(s), esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+// sessionStorage is per-tab => open 3 tabs as 3 different users for the multi-user demo
+let token=sessionStorage.token, me=JSON.parse(sessionStorage.me||"null"), streams=[], poll;
+function toast(m){const t=$("#toast");t.textContent=m;t.style.display="block";setTimeout(()=>t.style.display="none",2800)}
+async function api(p,method="GET",body){
+  const r=await fetch("/api"+p,{method,headers:{"Content-Type":"application/json",...(token?{Authorization:"Bearer "+token}:{})},body:body?JSON.stringify(body):undefined});
+  const d=await r.json().catch(()=>({}));
+  if(r.status===401&&token){logout();throw new Error("Session expired - please log in again")}
+  if(!r.ok)throw new Error(typeof d.detail==="string"?d.detail:JSON.stringify(d.detail));return d}
+const guard=f=>async(...a)=>{try{await f(...a)}catch(e){toast(e.message)}};
+const register=guard(async()=>{await api("/register","POST",{name:$("#name").value,email:$("#email").value,password:$("#pw").value,role:$("#role").value});toast("Registered - now log in")});
+const login=guard(async()=>{const d=await api("/login","POST",{email:$("#email").value,password:$("#pw").value});token=sessionStorage.token=d.token;me=d.user;sessionStorage.me=JSON.stringify(me);start()});
+function logout(){sessionStorage.clear();token=me=null;streams.forEach(s=>s.close());clearInterval(poll);$("#app").classList.add("hide");$("#auth").classList.remove("hide")}
+function start(){$("#auth").classList.add("hide");$("#app").classList.remove("hide");$("#who").textContent=`${me.name} (${me.role})`;
+  $("#create").classList.toggle("hide",me.role==="attendee");load();clearInterval(poll);poll=setInterval(notifs,5000)}
+async function publishEvent(){
+  try{
+    const eventName=$("#ename").value.trim();
+    const capacity=Number($("#cap").value);
+    const eventDate=$("#edate").value;
+    const startTime=$("#st").value;
+    const endTime=$("#et").value;
+    const venue=$("#venue").value.trim();
+    const deadline=$("#deadline").value || null;
+    const description=$("#desc").value.trim();
+
+    if(!eventName) throw new Error("Please enter an event name.");
+    if(!Number.isInteger(capacity) || capacity < 1) throw new Error("Capacity must be at least 1.");
+    if(!eventDate) throw new Error("Please select the event date.");
+    if(!startTime || !endTime) throw new Error("Please select both start and end times.");
+    if(endTime <= startTime) throw new Error("End time must be after start time.");
+    if(deadline && deadline > eventDate) throw new Error("Registration deadline must be on or before the event date.");
+
+    await api("/events","POST",{
+      event_name:eventName,
+      description,
+      event_date:eventDate,
+      start_time:startTime,
+      end_time:endTime,
+      venue,
+      capacity,
+      registration_deadline:deadline
+    });
+
+    toast("Event published successfully!");
+    $("#ename").value="";
+    $("#edate").value="";
+    $("#venue").value="";
+    $("#deadline").value="";
+    $("#desc").value="";
+    $("#cap").value="100";
+    load();
+  }catch(e){
+    toast(e.message || "Could not publish event.");
+  }
+}
+
+window.publishEvent=publishEvent;
+document.getElementById("publishBtn").addEventListener("click",publishEvent);
+const load=guard(async()=>{
+  streams.forEach(s=>s.close());streams=[];const evs=await api("/events");
+  $("#events").innerHTML=evs.map(card).join("")||"<p class=mut>No events yet.</p>";
+  evs.forEach(e=>{const s=new EventSource(`/api/events/${e.id}/stream?token=${token}`);s.onmessage=m=>paint(e.id,JSON.parse(m.data));streams.push(s)});notifs()});
+function card(e){const mine=me.role!=="attendee"&&e.organizer_id===me.id;
+  return `<div class="card event-card" id="ev-${e.id}"><div class="row event-top"><b style="flex:1">${esc(e.event_name)}</b><span class="badge" id="st-${e.id}">${e.status}</span></div>
+  <div class="mut">${e.event_date} ${e.start_time}-${e.end_time} | ${esc(e.venue)||"Online"} | capacity ${e.capacity}</div><p>${esc(e.description)}</p>
+  <div class="bar"><i id="bar-${e.id}" style="width:0"></i></div>
+  <div class="cnt"><div><b id="c-${e.id}-GOING">${e.counts.GOING}</b>Going</div><div><b id="c-${e.id}-MAYBE">${e.counts.MAYBE}</b>Maybe</div><div><b id="c-${e.id}-NOT_GOING">${e.counts.NOT_GOING}</b>Not going</div><div><b id="c-${e.id}-WAITLISTED">${e.counts.WAITLISTED}</b>Waitlist</div></div>
+  <div class="mut">My RSVP: <b id="my-${e.id}">${e.my_status||"none"}</b></div>
+  <div class="row" style="margin-top:8px"><button class="g" onclick="rsvp(${e.id},'GOING')">Going</button><button class="w" onclick="rsvp(${e.id},'MAYBE')">Maybe</button><button class="r" onclick="rsvp(${e.id},'NOT_GOING')">Not going</button><button class="o" onclick="unrsvp(${e.id})">Cancel RSVP</button><button class="o" onclick="updates(${e.id})">Updates</button>
+  ${mine?`<button class="o" onclick="stats(${e.id})">Analytics</button><button class="o" onclick="cancelEv(${e.id})">Cancel event</button>`:""}</div>
+  ${mine?`<div class="row" style="margin-top:8px"><input id="at-${e.id}" placeholder="Announcement title"><input id="am-${e.id}" placeholder="Message"><button onclick="announce(${e.id})">Send</button></div>`:""}
+  <div id="x-${e.id}" class="mut"></div></div>`}
+function paint(id,d){for(const k in d.counts){const el=$(`#c-${id}-${k}`);if(el)el.textContent=d.counts[k]}
+  const s=$("#st-"+id);if(s)s.textContent=d.status;const b=$("#bar-"+id);if(b)b.style.width=Math.min(100,d.counts.GOING/d.capacity*100)+"%"}
+const rsvp=guard(async(id,s)=>{const d=await api(`/events/${id}/rsvp`,"POST",{status:s});$("#my-"+id).textContent=d.status;toast(d.message);notifs()});
+const unrsvp=guard(async id=>{await api(`/events/${id}/rsvp`,"DELETE");$("#my-"+id).textContent="none";toast("RSVP cancelled")});
+const cancelEv=guard(async id=>{if(confirm("Cancel this event?")){await api("/events/"+id,"DELETE");load()}});
+const announce=guard(async id=>{await api(`/events/${id}/announcements`,"POST",{title:$("#at-"+id).value,message:$("#am-"+id).value});toast("Announcement sent")});
+const updates=guard(async id=>{const a=await api(`/events/${id}/announcements`);$("#x-"+id).innerHTML=a.map(x=>`<div class=n><b>${esc(x.title)}</b> ${esc(x.message)}</div>`).join("")||"No announcements yet."});
+const stats=guard(async id=>{const a=await api(`/events/${id}/analytics`);$("#x-"+id).innerHTML=`Response rate <b>${a.response_rate}%</b> (${a.total_rsvps}/${a.invited}) | Capacity used <b>${a.capacity_utilization}%</b> | Seats left <b>${a.available_seats}</b> | Waitlist <b>${a.waitlist_count}</b> | Conversion <b>${a.rsvp_conversion_rate}%</b><br>Growth: ${a.growth.map(g=>g.day+": "+g.n).join(", ")}`});
+const notifs=guard(async()=>{const n=await api("/notifications");$("#nc").textContent=n.filter(x=>!x.read).length;
+  $("#notifs").innerHTML=n.slice(0,6).map(x=>`<div class="n ${x.read?"":"u"}" onclick="readN(${x.id})">${esc(x.type)}: ${esc(x.message)}</div>`).join("")});
+const readN=guard(async id=>{await api(`/notifications/${id}/read`,"PUT");notifs()});
+if(token&&me)start();
+
+const edateEl=$("#edate");
+const deadlineEl=$("#deadline");
+function syncDateLimits(){
+  if(edateEl.value) deadlineEl.max=edateEl.value;
+}
+edateEl.addEventListener("change",syncDateLimits);
+syncDateLimits();
+</script></body></html>
